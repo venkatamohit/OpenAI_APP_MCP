@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import FlightCard from './components/FlightCard';
 import type { FlightOffer } from './components/FlightCard';
 
@@ -41,6 +41,12 @@ const flights: FlightOffer[] = [
   }
 ];
 
+type FlightWithLabels = FlightOffer & {
+  departureLabel: string;
+  arrivalLabel: string;
+  durationLabel: string;
+};
+
 const formatDate = (iso: string) =>
   new Intl.DateTimeFormat('en-US', {
     month: 'short',
@@ -58,6 +64,11 @@ const formatDuration = (minutes: number) => {
 
 function App() {
   const [selectedCabin, setSelectedCabin] = useState<string>('All cabins');
+  const [view, setView] = useState<'browse' | 'auth' | 'checkout'>('browse');
+  const [selectedFlight, setSelectedFlight] = useState<FlightWithLabels | null>(null);
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [authError, setAuthError] = useState<string>('');
 
   const cabins = useMemo(() => ['All cabins', ...new Set(flights.map((flight) => flight.fareClass))], []);
 
@@ -67,6 +78,303 @@ function App() {
     }
     return flights.filter((flight) => flight.fareClass === selectedCabin);
   }, [selectedCabin]);
+
+  const decoratedFlights = useMemo<FlightWithLabels[]>(
+    () =>
+      filteredFlights.map((flight) => ({
+        ...flight,
+        departureLabel: formatDate(flight.departure),
+        arrivalLabel: formatDate(flight.arrival),
+        durationLabel: formatDuration(flight.durationMinutes)
+      })),
+    [filteredFlights]
+  );
+
+  const handleCheckoutRequest = (flight: FlightWithLabels) => {
+    setSelectedFlight(flight);
+    setView('auth');
+    setUsername('');
+    setPassword('');
+    setAuthError('');
+  };
+
+  const handleAuthSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (username.trim() === 'test' && password === 'testpass') {
+      setAuthError('');
+      setView('checkout');
+    } else {
+      setAuthError('Incorrect username or password. Try test / testpass.');
+    }
+  };
+
+  const handleReturnToBrowse = () => {
+    setView('browse');
+    setSelectedFlight(null);
+    setAuthError('');
+  };
+
+  if (view === 'auth' && selectedFlight) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#f8fafc',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '420px',
+            width: '100%',
+            background: 'white',
+            borderRadius: '18px',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            boxShadow: '0 18px 40px rgba(15, 23, 42, 0.1)',
+            padding: '32px',
+            display: 'grid',
+            gap: '20px'
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleReturnToBrowse}
+            style={{
+              alignSelf: 'flex-start',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5f5',
+              background: 'white',
+              fontWeight: 600,
+              color: '#2563eb',
+              cursor: 'pointer'
+            }}
+          >
+            ← Back to flights
+          </button>
+          <div>
+            <p style={{ margin: 0, color: '#475569', fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              Secure checkout
+            </p>
+            <h1 style={{ margin: '6px 0 0', fontSize: '30px', fontWeight: 700 }}>Sign in to continue</h1>
+            <p style={{ margin: '10px 0 0', color: '#475569' }}>
+              Use the demo credentials <strong>test</strong> / <strong>testpass</strong> to unlock the checkout flow.
+            </p>
+          </div>
+          <form onSubmit={handleAuthSubmit} style={{ display: 'grid', gap: '16px' }}>
+            <label style={{ display: 'grid', gap: '6px', fontWeight: 600, color: '#0f172a' }}>
+              Username
+              <input
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Enter username"
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5f5',
+                  fontSize: '15px'
+                }}
+                required
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '6px', fontWeight: 600, color: '#0f172a' }}>
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter password"
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5f5',
+                  fontSize: '15px'
+                }}
+                required
+              />
+            </label>
+            {authError && (
+              <p style={{ margin: 0, color: '#ef4444', fontWeight: 600, fontSize: '14px' }} role="alert">
+                {authError}
+              </p>
+            )}
+            <button
+              type="submit"
+              style={{
+                marginTop: '8px',
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                color: 'white',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 10px 20px rgba(59, 130, 246, 0.35)'
+              }}
+            >
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'checkout' && selectedFlight) {
+    const pointsBalance = 120000;
+    const remainingPoints = pointsBalance - selectedFlight.pointsPrice;
+    const formattedRemaining =
+      remainingPoints >= 0 ? remainingPoints.toLocaleString() : `-${Math.abs(remainingPoints).toLocaleString()}`;
+
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#eef2ff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '720px',
+            width: '100%',
+            background: 'white',
+            borderRadius: '20px',
+            border: '1px solid rgba(59, 130, 246, 0.16)',
+            boxShadow: '0 24px 50px rgba(37, 99, 235, 0.18)',
+            padding: '36px',
+            display: 'grid',
+            gap: '24px'
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleReturnToBrowse}
+            style={{
+              justifySelf: 'flex-start',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: '1px solid rgba(37, 99, 235, 0.3)',
+              background: 'white',
+              color: '#2563eb',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            ← Back to flights
+          </button>
+          <header>
+            <p style={{ margin: 0, color: '#475569', fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              Checkout
+            </p>
+            <h1 style={{ margin: '6px 0 0', fontSize: '34px', fontWeight: 700 }}>
+              Confirm your Skyward Rewards redemption
+            </h1>
+            <p style={{ margin: '12px 0 0', color: '#475569' }}>
+              Review the flight details and make sure you have enough points before completing your booking.
+            </p>
+          </header>
+
+          <section
+            style={{
+              borderRadius: '16px',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              padding: '24px',
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(14, 165, 233, 0.04))'
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700 }}>
+              {selectedFlight.origin} → {selectedFlight.destination}
+            </h2>
+            <p style={{ margin: '8px 0 0', color: '#475569', fontWeight: 600 }}>{selectedFlight.fareClass}</p>
+            <div style={{ marginTop: '16px', display: 'grid', gap: '8px', color: '#0f172a' }}>
+              <span>
+                <strong>Departure:</strong> {selectedFlight.departureLabel}
+              </span>
+              <span>
+                <strong>Arrival:</strong> {selectedFlight.arrivalLabel}
+              </span>
+              <span>
+                <strong>Duration:</strong> {selectedFlight.durationLabel}
+              </span>
+            </div>
+          </section>
+
+          <section
+            style={{
+              display: 'grid',
+              gap: '16px',
+              padding: '24px',
+              borderRadius: '16px',
+              border: '1px solid rgba(15, 23, 42, 0.08)',
+              background: '#f8fafc'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#0f172a' }}>
+              <span>Your points balance</span>
+              <span>{pointsBalance.toLocaleString()} pts</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2563eb', fontWeight: 600 }}>
+              <span>Flight cost</span>
+              <span>{selectedFlight.pointsPrice.toLocaleString()} pts</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#0f172a' }}>
+              <span>Balance after booking</span>
+              <span>{formattedRemaining} pts</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+              <span>Cash comparison</span>
+              <span>${selectedFlight.cashPrice.toLocaleString()}</span>
+            </div>
+          </section>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleReturnToBrowse}
+              style={{
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: '1px solid #2563eb',
+                background: 'white',
+                color: '#2563eb',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                alert('Demo checkout complete! Returning to flight search.');
+                handleReturnToBrowse();
+              }}
+              style={{
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                color: 'white',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 10px 20px rgba(59, 130, 246, 0.35)'
+              }}
+            >
+              Complete booking
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '32px', maxWidth: '980px', margin: '0 auto' }}>
@@ -116,15 +424,11 @@ function App() {
       </div>
 
       <main style={{ display: 'grid', gap: '20px' }}>
-        {filteredFlights.map((flight) => (
+        {decoratedFlights.map((flight) => (
           <FlightCard
             key={flight.id}
-            flight={{
-              ...flight,
-              departureLabel: formatDate(flight.departure),
-              arrivalLabel: formatDate(flight.arrival),
-              durationLabel: formatDuration(flight.durationMinutes)
-            }}
+            flight={flight}
+            onCheckout={handleCheckoutRequest}
           />
         ))}
       </main>

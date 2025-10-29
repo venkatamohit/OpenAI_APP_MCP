@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "serve": "serve -s ./assets -p 4444 --cors",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -20,6 +21,7 @@
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.2.0",
+    "serve": "^14.2.5",
     "typescript": "^5.2.2",
     "vite": "^5.0.0"
   }

@@ -23,9 +23,10 @@ export type FlightOffer = FlightBase & Partial<DecoratedFields>;
 
 interface FlightCardProps {
   flight: FlightBase & DecoratedFields;
+  onCheckout?: (flight: FlightBase & DecoratedFields) => void;
 }
 
-const FlightCard = ({ flight }: FlightCardProps) => {
+const FlightCard = ({ flight, onCheckout }: FlightCardProps) => {
   return (
     <article
       style={{
@@ -126,6 +127,7 @@ const FlightCard = ({ flight }: FlightCardProps) => {
             cursor: 'pointer',
             boxShadow: '0 10px 20px rgba(59, 130, 246, 0.3)'
           }}
+          onClick={() => onCheckout?.(flight)}
         >
           Continue to checkout
         </button>
