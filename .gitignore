@@ -1,9 +1,9 @@
 # Node
-node_modules/
-app/node_modules/
-travel-app/app/node_modules/
-dist/
-travel-app/app/dist/
+#node_modules/
+#app/node_modules/
+#travel-app/app/node_modules/
+#dist/
+#travel-app/app/dist/
 
 # Python
 __pycache__/
